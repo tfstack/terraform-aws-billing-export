@@ -18,6 +18,22 @@ resource "random_string" "suffix" {
   numeric = false
 }
 
+resource "aws_iam_role" "bcm_report_read_only" {
+  name = "bcm-report-read-only-${random_string.suffix.result}"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
 data "aws_caller_identity" "current" {}
 
 data "aws_region" "current" {}

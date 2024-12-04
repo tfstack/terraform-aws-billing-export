@@ -8,6 +8,12 @@ variable "export_name" {
   type        = string
 }
 
+variable "iam_readonly_roles" {
+  description = "List of IAM roles to attach the BCM export read-only policy"
+  type        = list(string)
+  default     = []
+}
+
 variable "query_statement" {
   description = "The SQL query for BCM data export."
   type        = string
@@ -60,6 +66,11 @@ ap-southeast-3, sa-east-2.
 
 EOF
   }
+}
+
+variable "resource_suffix" {
+  description = "A unique suffix used to create resources such as the S3 bucket name for BCM data export."
+  type        = string
 }
 
 variable "s3_acl" {

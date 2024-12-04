@@ -26,11 +26,29 @@ resource "random_string" "suffix" {
   numeric = false
 }
 
+resource "aws_iam_role" "bcm_report_read_only" {
+  name = "bcm-report-read-only-${random_string.suffix.result}"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
 module "bcmdataexports_export" {
   source = "../.."
 
   account_id  = data.aws_caller_identity.current.account_id
   export_name = "bcm-report"
+
+  iam_readonly_roles = [aws_iam_role.bcm_report_read_only.name]
 
   query_statement = <<EOT
     SELECT
@@ -43,9 +61,10 @@ module "bcmdataexports_export" {
 
   refresh_frequency = "SYNCHRONOUS"
   region            = data.aws_region.current.name
+  resource_suffix   = random_string.suffix.result
 
   s3_acl              = "private"
-  s3_bucket_name      = "bcm-export-${random_string.suffix.result}"
+  s3_bucket_name      = "bcm-export"
   s3_force_destroy    = true
   s3_object_ownership = "BucketOwnerPreferred"
 
