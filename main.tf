@@ -1,5 +1,5 @@
 resource "aws_s3_bucket" "this" {
-  bucket        = var.s3_bucket_name
+  bucket        = "${var.s3_bucket_name}-${var.resource_suffix}"
   force_destroy = var.s3_force_destroy
 
   tags = var.tags
@@ -72,7 +72,7 @@ resource "aws_s3_bucket_policy" "this" {
 
 resource "aws_bcmdataexports_export" "this" {
   export {
-    name = var.export_name
+    name = "${var.export_name}-${var.resource_suffix}"
 
     data_query {
       query_statement      = var.query_statement
@@ -98,4 +98,39 @@ resource "aws_bcmdataexports_export" "this" {
       frequency = var.refresh_frequency
     }
   }
+}
+
+# Custom policy for BCM permissions
+resource "aws_iam_policy" "bcm_custom_policy" {
+  name        = "BCMDataExportsPolicy-${var.resource_suffix}"
+  description = "Policy for BCM Data Exports Read-Only Access"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "bcm-data-exports:ListTables",
+          "bcm-data-exports:ListExports",
+          "bcm-data-exports:GetExport"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# Attach the custom BCM policy to the IAM roles
+resource "aws_iam_role_policy_attachment" "bcm_custom_policy" {
+  count      = length(var.iam_readonly_roles)
+  role       = var.iam_readonly_roles[count.index]
+  policy_arn = aws_iam_policy.bcm_custom_policy.arn
+}
+
+# Attach the AWSBillingReadOnlyAccess policy to the IAM roles
+resource "aws_iam_role_policy_attachment" "billing_policy" {
+  count      = length(var.iam_readonly_roles)
+  role       = var.iam_readonly_roles[count.index]
+  policy_arn = "arn:aws:iam::aws:policy/AWSBillingReadOnlyAccess"
 }

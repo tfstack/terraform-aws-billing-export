@@ -12,6 +12,10 @@ run "create_billing_export" {
     account_id  = run.setup.account_id
     export_name = "bcm-report"
 
+    iam_readonly_roles = [
+      "bcm-report-read-only-${run.setup.suffix}"
+    ]
+
     query_statement = <<EOT
       SELECT
       identity_line_item_id,
@@ -23,10 +27,11 @@ run "create_billing_export" {
 
     refresh_frequency = "SYNCHRONOUS"
     region            = run.setup.region
+    resource_suffix   = run.setup.suffix
 
     # S3 bucket configuration
     s3_acl              = "private"
-    s3_bucket_name      = "bcm-export-${run.setup.suffix}"
+    s3_bucket_name      = "bcm-export"
     s3_force_destroy    = true
     s3_object_ownership = "BucketOwnerPreferred"
 
@@ -58,8 +63,8 @@ run "create_billing_export" {
 
   # Validate S3 bucket name
   assert {
-    condition     = aws_s3_bucket.this.bucket == var.s3_bucket_name
-    error_message = "Expected S3 bucket name to be '${var.s3_bucket_name}', but it differs."
+    condition     = aws_s3_bucket.this.bucket == "${var.s3_bucket_name}-${run.setup.suffix}"
+    error_message = "Expected S3 bucket name to be '${var.s3_bucket_name}-${run.setup.suffix}', but it differs."
   }
 
   # Validate S3 bucket force_destroy attribute
@@ -102,8 +107,8 @@ run "create_billing_export" {
 
   # Validate export resource name
   assert {
-    condition     = aws_bcmdataexports_export.this.export[0].name == var.export_name
-    error_message = "Expected export name to be '${var.export_name}', but it differs."
+    condition     = aws_bcmdataexports_export.this.export[0].name == "${var.export_name}-${run.setup.suffix}"
+    error_message = "Expected export name to be '${var.export_name}-${run.setup.suffix}', but it differs."
   }
 
   # Validate query statement
